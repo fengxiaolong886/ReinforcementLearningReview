@@ -6,32 +6,45 @@ import sys
 from collections import defaultdict
 from Plot3D import plot_3D
 
-def mc_firstvisit_prediction(policy, env, num_episodes,
+def mc_firstvisit_control_epsilon_greedy(policy, env, num_episodes,epsilon=0.1,
                              episode_endtime= 10, discount = 1.0):
     """
-    This is the implementation for Monto Carlo First visit prediction
+    This function implement the On-policy first policy Monto Carlo Control 
     algorithm.
 
     The algorithm is shown as below:
     
-    Input: a policy pi to be evaluated.
+    -------------------------------------------------
+    Alogrithm parameter : small epsilon >0
     Initialize:
-        V(s). arbitrarily for all s.
-        Returns(s) <--- all empty list, for all s.
+        pi <-- an arbitary epsilon -greedy policy   
+        Q(s,a ) (arbitary) for all s and a
+        Return(s,a) <-- empty list , for all s and a
 
-    Loop forever (for each episode):
+    Repeat forever(for each episode):
         Generate all episode follwing pi: S_0, A_0, R_0, S_1, A_1, R_1.... R_T
         G <--- 0
         Loop for each step of episode, t = T-1, T-2, ....,0
-        G  <---$\gamma * G + R_{t+1}$
-        Unless S_t appear in S_0, S_1, ... S_{t-1}
-            Append G to Return(S_t)
-            V(S_t) <-- average(Returns(S_t))
+            G  <--- $\gamma * G + R_{t+1}$
+            Unless S_t, A_t  appear in S_0,A_0,S_1,A_1.....:
+                Append G to Return(S_t,A_t)
+                $A^* \leftarrow argmax_{a} Q(S_t, A_t)$
+                For all a:
+                    $$
+                    \pi(a|s) \leftarrow
+                    \begin{cases}
+                    1-\epsilon + \frac{\epsilon}{A(S_t)}  \ \ \  if  \  a = A^*
+                    \\
+                    \frac{\epsilon}{|A(S_t)|}
+                    \end{cases}
+                    $$
+    -------------------------------------------------
     """
-
+    
+    nA = env.action_space.n
+    Q = defaultdict(lambda: np.zeros(nA))
     r_sum = defaultdict(float)
     r_count = defaultdict(float)
-    r_V = defaultdict(float)
 
     for each_episode in range(num_episodes):
         # Show the progress
@@ -44,7 +57,9 @@ def mc_firstvisit_prediction(policy, env, num_episodes,
 
         # Generate an episode according the policy.
         for _ in range(episode_endtime):
-            action = policy(state)
+            action_prob = policy(state)
+            action = np.random.choice(np.arange(action_prob.shape[0], p=action_prob))
+            
             next_state, reward, done, info = env.step(action)
             episode.append((state, action, reward))
             if done:
@@ -54,17 +69,18 @@ def mc_firstvisit_prediction(policy, env, num_episodes,
 
         # Calculate the first visit MC value
         for visit_pos, data in enumerate(episode):
-            state_visit = data[0]
+            state_action_visit = (data[0],data[1])
+
             G = sum([x[2] * np.power(discount, i) for i, x in enumerate(episode[visit_pos:])])
             
             # Calculate the averate return 
-            r_sum[state_visit] += G
-            r_count[state_visit] += 1.0
-            r_V[state_visit] = r_sum[state_visit] / r_count[state_visit]
+            r_sum[state_action_visit] += G
+            r_count[state_action_visit] += 1.0
+            Q[state_action_visit] = r_sum[state_action_visit] / r_count[state_action_visit]
     
-    return r_V
+    return Q
 
-def simple_policy(state):
+def  (state):
     """
     Define a simple policy which only the player's score greater
     than 18 to take hold, otherwise take action hit.

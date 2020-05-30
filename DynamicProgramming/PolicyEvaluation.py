@@ -13,9 +13,9 @@ def policy_eval(enviroment,policy,discount_factor=1.0,theta=0.1):
     Loop:
         delta <-- 0
         Loop for each s:
-            v <-- V(s)
-            V(s) <-- sum_a { pi(a|s) } sum_s'_r {p(s',r |s,a)[ r+ gamma * V(s')] }
-            delta <-- max(delta, np.abs(v - V(s)))
+            v <-- v(s)
+            V(s) <-- $\sum_a\pi(a|s)\sum_{s',r}p(s',r|s,a)[r+\gamma v(s')]$
+            delta <-- $max(delta,| v - V(s) |$
     until delta < theta
     """
    

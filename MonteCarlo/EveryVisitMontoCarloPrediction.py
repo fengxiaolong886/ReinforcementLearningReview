@@ -6,7 +6,7 @@ import sys
 from collections import defaultdict
 from Plot3D import plot_3D
 
-def mc_firstvisit_prediction(policy, env, num_episodes,
+def mc_everyvisit_prediction(policy, env, num_episodes,
                              episode_endtime= 10, discount = 1.0):
     """
     This is the implementation for Monto Carlo First visit prediction
@@ -24,11 +24,10 @@ def mc_firstvisit_prediction(policy, env, num_episodes,
         G <--- 0
         Loop for each step of episode, t = T-1, T-2, ....,0
         G  <---$\gamma * G + R_{t+1}$
-        Unless S_t appear in S_0, S_1, ... S_{t-1}
+        For every  S_t appear in S_0, S_1, ... S_{t-1}
             Append G to Return(S_t)
             V(S_t) <-- average(Returns(S_t))
     """
-
     r_sum = defaultdict(float)
     r_count = defaultdict(float)
     r_V = defaultdict(float)
@@ -55,13 +54,13 @@ def mc_firstvisit_prediction(policy, env, num_episodes,
         # Calculate the first visit MC value
         for visit_pos, data in enumerate(episode):
             state_visit = data[0]
-            G = sum([x[2] * np.power(discount, i) for i, x in enumerate(episode[visit_pos:])])
+            G = sum([x[2] * np.power(discount, i) for i, x in enumerate(episode)])
             
             # Calculate the averate return 
             r_sum[state_visit] += G
             r_count[state_visit] += 1.0
             r_V[state_visit] = r_sum[state_visit] / r_count[state_visit]
-    
+
     return r_V
 
 def simple_policy(state):
@@ -95,11 +94,11 @@ def process_data_for_Blackjackproblem(V,ace=True):
 
 if __name__ == "__main__":
     env = gym.make("Blackjack-v0")
-    v1= mc_firstvisit_prediction(simple_policy, env, num_episodes=1000000)
+    v1= mc_everyvisit_prediction(simple_policy, env, num_episodes=1000000)
     print(v1)
     X, Y, Z = process_data_for_Blackjackproblem(v1, ace=True)
     fig = plot_3D(X, Y, Z, xlabel="Player sum", ylabel="Dealer sum", zlabel="Value", title="Usable Ace")
-    fig.savefig("./log/Usable_Ace.jpg")
+    fig.savefig("./log/EveryVisit_Usable_Ace_1M.jpg")
     X, Y, Z = process_data_for_Blackjackproblem(v1, ace= False)
     fig = plot_3D(X, Y, Z, xlabel="Player sum", ylabel="Dealer sum", zlabel="Value", title="No Usable Ace")
-    fig.savefig("./log/No_Usable_Ace.jpg")
+    fig.savefig("./log/EveryVisit_No_Usable_Ace_1M.jpg")

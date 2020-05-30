@@ -14,17 +14,17 @@ def policy_iteration(env,policy,discount_factor=1.0,endstate=15):
             delta <-- 0
             Loop for each s:
                 v <-- V(s)
-                V(s) <-- sum_a { pi(a|s) } sum_s'_r {p(s',r |s,a)[ r+ gamma * V(s')] }
-                delta <-- max(delta, np.abs(v - V(s)))
-    until delta < theta (a small postive number determining the accuracy of estimation)
+                V(s) <--$\sum_a\pi(a|s)\sum_{s',r}p(s',r|s,a)[r+\gamma v(s')]$ 
+                delta <-- $max(delta,| v - V(s) |$
+            until delta < theta (a small postive number determining the accuracy of estimation)
     
     3.Policy Improvement:
         policy_stable <-- true
         For each s in S:
             old-action <-- pi(s)
-            pi(s)  <-- argmax_a { sum_s'_r (p(s',r | s,a )[r + gamma * V(s')])  }
+            pi(s)  <-- $argmax_{a}\sum_{s',r}p(s',r|s,a)[r+\gamma v(s')]$
             if old-action != pi(s) ,then policy_stable <-- false
-         If policy-stable, then stop and return V=v(pi_*) and pi = pi_*;
+         If policy-stable, then stop and return V=v(pi^*) and pi = pi^*;
             else go to 2
 
     PS. endstate shown the end state of the enviroment, the 15 is the end state 
