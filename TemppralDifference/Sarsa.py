@@ -1,7 +1,7 @@
 # coding: UTF-8
 
 """
-This file is the implementation for the QLearning Algorithm
+This file is the implementation for the Sarsa Algorithm
 It is specified to solve the CartPole issue
 """
 
@@ -14,7 +14,7 @@ import pandas as pd
 from collections import namedtuple
 from Plot2DResult import *
 
-class QLearning():
+class Sarsa():
     def __init__(self, actions, discount=1.0, alpha=0.5, epsilon=0.1):
         self.actions = actions
         self.discount = discount
@@ -36,13 +36,13 @@ class QLearning():
             action = np.random.choice(self.actions)
         return action
 
-    def learn(self, s, a, r, s_,done):
+    def learn(self, s, a, r, s_,a_,done):
         self.check_state_exist(s_)
         q_predict = self.Q_table.loc[s, a]
         if done:
             q_target = r
         else:
-            q_target = r + self.discount * self.Q_table.loc[s_,:].max()
+            q_target = r + self.discount * self.Q_table.loc[s_,a_]
         # update
         self.Q_table.loc[s, a] += self.alpha * (q_target - q_predict)
 
@@ -111,7 +111,9 @@ def update(RL, env, num_episodes):
             action = RL.choose_action(observation)
             observation_next_, reward, done, info = env.step(action)
             observation_next = convert_state(observation_next_)
-            RL.learn(observation, action, reward, observation_next, done)
+            action_next = RL.choose_action(observation_next)
+
+            RL.learn(observation, action, reward, observation_next, action_next, done)
             observation = observation_next
             
             # update the record
@@ -128,10 +130,12 @@ def update(RL, env, num_episodes):
 
 
 if __name__ == "__main__":
-    num_episodes = 2000
+    num_episodes = 200
     env = gym.make("CartPole-v0")
     actions = [i for i in range(env.action_space.n)] 
-    RL = QLearning(actions, discount=1.0, alpha=0.5, epsilon=0.1)
+    RL = Sarsa(actions, discount=1.0, alpha=0.5, epsilon=0.1)
+
+    # Plot the result 
     rec = update(RL, env, num_episodes=num_episodes)
     episode_lengths = rec.episode_lengths
     fig = plot_episode_stats(episode_lengths, 
@@ -139,7 +143,7 @@ if __name__ == "__main__":
                        ylabel = "Episode Length",
                        title = "Episode length over Time"
             )
-    fig.savefig("./log/QLearning_CartPole_EpisodeLength.jpg")
+    fig.savefig("./log/Sarsa_CartPole_EpisodeLength.jpg")
     
     
     smoohing_window = 10
@@ -151,7 +155,7 @@ if __name__ == "__main__":
                        ylabel = "Episode Reward",
                        title = "Episode reward over time"
             )
-    fig.savefig("./log/QLearning_CartPole_EpisodeReward.jpg")
+    fig.savefig("./log/Sarsa_CartPole_EpisodeReward.jpg")
 
 
 
