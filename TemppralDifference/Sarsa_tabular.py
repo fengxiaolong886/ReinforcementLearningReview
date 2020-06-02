@@ -27,7 +27,7 @@ class Sarsa():
     def choose_action(self, observation):
         self.check_state_exist(observation)
         # select action
-        if np.random.uniform() < self.epsilon:
+        if np.random.uniform() > self.epsilon:
             # choose the best action
             state_action = self.Q_table.loc[observation,:]
             action = np.random.choice(state_action[state_action == np.max(state_action)].index)
@@ -39,10 +39,7 @@ class Sarsa():
     def learn(self, s, a, r, s_,a_,done):
         self.check_state_exist(s_)
         q_predict = self.Q_table.loc[s, a]
-        if done:
-            q_target = r
-        else:
-            q_target = r + self.discount * self.Q_table.loc[s_,a_]
+        q_target = r + self.discount * self.Q_table.loc[s_,a_]
         # update
         self.Q_table.loc[s, a] += self.alpha * (q_target - q_predict)
 
@@ -88,8 +85,7 @@ def cut_state_to_bins(n_bins=10):
     return [CartPole_Cart_position_bins, CartPole_Pole_angle_bins,
             CartPole_Cart_velocity_bins, CartPole_angle_rate_bins]
 
-def convert_state(state, n_bins=10):
-    bins = cut_state_to_bins(n_bins)
+def convert_state(state, bins):
     converd_state = get_bins_states(state, bins)
     return str(converd_state)
 
@@ -100,17 +96,18 @@ def update(RL, env, num_episodes):
     rec = record(episode_lengths=np.zeros(num_episodes),
                           episode_rewards=np.zeros(num_episodes))
     
+    bins = cut_state_to_bins(n_bins=10)
     for i_episode in range(num_episodes):
         if 0 == (i_episode +1) % 2:
             print("This the episode {}/{}".format(i_episode, num_episodes), end = "\r")
         observation_ = env.reset()
         step =0
+        observation = convert_state(observation_, bins)
         while True:
             #env.render()
-            observation = convert_state(observation_)
             action = RL.choose_action(observation)
             observation_next_, reward, done, info = env.step(action)
-            observation_next = convert_state(observation_next_)
+            observation_next = convert_state(observation_next_, bins)
             action_next = RL.choose_action(observation_next)
 
             RL.learn(observation, action, reward, observation_next, action_next, done)
@@ -130,8 +127,10 @@ def update(RL, env, num_episodes):
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     num_episodes = 200
     env = gym.make("CartPole-v0")
+    env.seed(2)
     actions = [i for i in range(env.action_space.n)] 
     RL = Sarsa(actions, discount=1.0, alpha=0.5, epsilon=0.1)
 
@@ -156,7 +155,8 @@ if __name__ == "__main__":
                        title = "Episode reward over time"
             )
     fig.savefig("./log/Sarsa_CartPole_EpisodeReward.jpg")
-
+    end_time = time.time()
+    print("This alogrithm cost time is :", end_time-start_time)
 
 
 
