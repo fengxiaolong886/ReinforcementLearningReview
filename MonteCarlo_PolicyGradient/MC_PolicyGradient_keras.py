@@ -40,8 +40,6 @@ from keras import models,layers,optimizers
 import matplotlib
 from matplotlib import pyplot as plt
 
-get_ipython().run_line_magic('matplotlib', 'inline')
-matplotlib.style.use('ggplot')
 
 
 # In[2]:
@@ -51,7 +49,7 @@ RENDER_ENV = False
 LEARNING_RATE = 0.01
 REWARD_DECAY = 0.95
 OUTPUT_GRAPH = False
-ENVNAME = "MountainCar-v0"
+ENVNAME = "CartPole-v0"
 N_LAYER1 = 10
 N_LAYER2 = 10
 NUM_EPISODES = 1000
@@ -107,9 +105,9 @@ class MCPG():
         discounted_episode_reward_normalized = self._discount_and_norm_rewards()
         episode_length = len(self.episode_observation)
         # transform to one-hot label
-        advantage = np.zeros(episode_length, self.n_action)
+        advantage = np.zeros((episode_length, self.n_action))
         for i in range(episode_length):
-            advantage[i][self.action] = discounted_episode_reward_normalized[i]
+            advantage[i][self.episode_actions] = discounted_episode_reward_normalized[i]
         # train
         self.model.fit(np.vstack(self.episode_observation), advantage, verbose=0)
         
@@ -155,13 +153,12 @@ def plot_episode_stats2(stats):
 def Plot_the_result(rec):
     # Plot episode length over time
     episode_lengths = rec.episode_lengths
-    fig = plot_episode_stats(episode_lengths, 
+    fig = plot_episode_stats1(episode_lengths, 
                        xlabel = "Episode",
                        ylabel = "Episode Length",
                        title = "Episode length over Time"
             )
-    fig.show()
-#    fig.savefig("./log/FA_QLearning_MountainCar_EpisodeLength.jpg")
+    fig.savefig("./log/MCPG_keras_CartPole_EpisodeLength.jpg")
 
     # Plot Episode reward over time
     smoohing_window = 10
@@ -171,13 +168,11 @@ def Plot_the_result(rec):
                        ylabel = "Episode Reward",
                        title = "Episode reward over time"
             )
-    fig.show()
-#    fig.savefig("./log/FA_QLearning_Mountain_EpisodeReward.jpg")
+    fig.savefig("./log/MCPG_keras_CartPole_EpisodeReward.jpg")
     
     # Plot Episode per time step
     fig = plot_episode_stats2(rec)
-    fig.show()
-#    fig.savefig("./log/FA_QLearning_Mountain_EpisodePerTimeStep.jpg")
+    fig.savefig("./log/MCPG_keras_CartPole_EpisodePerTimeStep.jpg")
 
 
 # In[5]:

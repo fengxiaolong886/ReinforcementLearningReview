@@ -40,7 +40,7 @@ OUTPUT_GRAPH = False
 ENVNAME = "CartPole-v0"
 N_LAYER1 = 10
 N_LAYER2 = 10
-NUM_EPISODES = 200
+NUM_EPISODES = 1000
 ACTIVATION_FUNCTION = tf.nn.tanh
 
 
@@ -198,7 +198,7 @@ def Plot_the_result(rec):
                        title = "Episode length over Time"
             )
 #    fig.show()
-    fig.savefig("./log/MCPG__MountainCar_EpisodeLength.jpg")
+    fig.savefig("./log/MCPG_tf_MountainCar_EpisodeLength.jpg")
 
     # Plot Episode reward over time
     smoohing_window = 10
@@ -209,12 +209,12 @@ def Plot_the_result(rec):
                        title = "Episode reward over time"
             )
 #    fig.show()
-    fig.savefig("./log/MCPG_Mountain_EpisodeReward.jpg")
+    fig.savefig("./log/MCPG_tf_Mountain_EpisodeReward.jpg")
     
     # Plot Episode per time step
     fig = plot_episode_stats2(rec)
 #    fig.show()
-    fig.savefig("./log/MCPG_Mountain_EpisodePerTimeStep.jpg")
+    fig.savefig("./log/MCPG_tf_Mountain_EpisodePerTimeStep.jpg")
 
 
 
