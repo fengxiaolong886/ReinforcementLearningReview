@@ -9,11 +9,11 @@ SHOW = False # show the current state, reward and action
 MAP = False # show the trajectory in 2d map
 
 TF_DEVICE = '/gpu:0'
-MAX_EPOCHS = 10 # max episode number
+MAX_EPOCHS = 2000 # max episode number
 MEMORY_SIZE = 5000
-LEARN_START_STEP = 10000
+LEARN_START_STEP = 1000
 INPUT_SIZE = 84
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 LEARNING_RATE = 1e-3  # 1e6
 GAMMA = 0.95
 INITIAL_EPSILON = 1  # starting value of epsilon

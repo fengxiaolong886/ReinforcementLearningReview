@@ -48,14 +48,14 @@ class DeepQ:
         with tf.variable_scope("eval_net"):
             e1 = tf.layers.dense(self.s, 20, tf.nn.relu, 
                     kernel_initializer=w_initlizer, bias_initializer=b_initlizer, name="e1")
-            self.q_eval = tf.layers.dense(e1, self.action_space, tf.nn.relu,
+            self.q_eval = tf.layers.dense(e1, self.action_space,
                     kernel_initializer=w_initlizer, bias_initializer=b_initlizer, name="q")\
 
         # build the target network
         with tf.variable_scope("target_network"):
             t1 = tf.layers.dense(self.s_, 20, tf.nn.relu, 
                     kernel_initializer=w_initlizer, bias_initializer=b_initlizer, name="t1")
-            self.q_next = tf.layers.dense(t1, self.action_space, tf.nn.relu,
+            self.q_next = tf.layers.dense(t1, self.action_space,
                     kernel_initializer=w_initlizer, bias_initializer=b_initlizer, name="q_next")
         
         with tf.variable_scope("q_target"):
@@ -77,8 +77,7 @@ class DeepQ:
         print('update target network')
 
     def getQValues(self,state):
-#        state = state[np.newaxis,:]
-        predicted = self.sess.run(self.q_next,feeddict={self.s_, state})
+        predicted = self.sess.run(self.q_next,feed_dict={self.s_ : state})
 
     def getMaxIndex(self, qValues):
         return np.argmax(qValues)
@@ -101,22 +100,19 @@ class DeepQ:
 
 
     def learnOnMiniBatch(self, miniBatchSize,):
-        #t0 = time.time()
         self.count_steps += 1
 
         state_batch,action_batch,reward_batch,newState_batch,isFinal_batch\
         = self.memory.getMiniBatch(miniBatchSize)
-
+        
         
         _, cost = self.sess.run([self._train_op, self.loss],
-                                feeddict-{
+                                feed_dict={
                                     self.s : state_batch,
                                     self.a : action_batch,
                                     self.r : reward_batch,
                                     self.s_: newState_batch,
                                     })
-
-        qValues_batch = self.model.predict(np.array(state_baddtch),batch_size=miniBatchSize)
 
 
         if self.useTargetNetwork and self.count_steps % 1000 == 0:
@@ -129,8 +125,7 @@ class DeepQ:
         pass
 
     def feedforward(self,observation,explorationRate):
-        observation = observation[np.newaxis,:]
-        print("-------------------",type(observation))
+#        observation = observation[np.newaxis,:]
         qValues = self.getQValues(observation)
         action = self.selectAction(qValues, explorationRate)
         return action
