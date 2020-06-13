@@ -7,12 +7,13 @@ from constants import *
 from gym import wrappers
 from measure import *
 from collections import namedtuple
+import tensorflow as tf
 
 if __name__ == '__main__':
+    tf.set_random_seed(12)
     env = gym.make(ENV_NAME)
     env = env.unwrapped
-    input_shape=[1,4]
-    env.rendering = SHOW
+
     action_space=env.action_space.n
     obs_space=env.observation_space.shape
     explorationRate = INITIAL_EPSILON
@@ -24,6 +25,8 @@ if __name__ == '__main__':
     
     rec = record(episode_lengths=np.zeros(MAX_EPOCHS),
                           episode_rewards=np.zeros(MAX_EPOCHS))
+    total_action0 =0
+    total_action1 =0
 
     for epoch in range(MAX_EPOCHS):
         obs = env.reset()
@@ -34,12 +37,25 @@ if __name__ == '__main__':
                  < LEARN_START_STEP) and TRAIN is True :  # explore
             EXPLORE = True
         else:
-            EXPLORE = False
-            print ("Evaluate Model")
-        for t in range(1000):
+            EXPLORE = True
+#            print ("Evaluate Model")
+        done = False
+        action_0 = 1
+        action_1 =1
+    
+        while True:
+            if cumulated_reward >100:
+                env.render()
             step += 1
             if EXPLORE is True: 
                  action = Agent.feedforward(observation, explorationRate)
+                 if action == 0:
+                     action_0 += 1
+                     total_action0 += 1
+                 else:
+                     action_1 += 1
+                     total_action1 += 1
+
                  obs_new, reward, done, info = env.step(action)
                  newObservation = obs_new[np.newaxis,:]
                  stepCounter += 1
@@ -64,8 +80,11 @@ if __name__ == '__main__':
         
         rec.episode_lengths[epoch] = step 
         rec.episode_rewards[epoch] += cumulated_reward
-        
-        print("This is epoch:",epoch," and the cumulated_reward is :",cumulated_reward)
+        if cumulated_reward >50 or epoch % 1000 ==0: 
+            size = Agent.getMemorySize()
+            totalactionrate = float(total_action0/total_action1)
+            print("This is epoch: {}, reward: {}, action: {}/{}, total action: {}/{},rate:{}".format(
+                epoch, cumulated_reward, action_0, action_1,total_action0, total_action1, totalactionrate))
     figname=ENV_NAME+str(MAX_EPOCHS)+".jpg"
     plot_and_save(reward_history,MONITOR_DIR,figname)
     
