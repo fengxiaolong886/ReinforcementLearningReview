@@ -48,7 +48,7 @@ class Memory:
         reward_batch = []
         newState_batch = []
         isFinal_batch = []
-        indices = random.sample(np.arange(len(self.states)), min(size,len(self.states)) )
+        indices = random.sample(list(np.arange(len(self.states))), min(size,len(self.states)) )
         for index in indices:
             state_batch.append(self.states[index][0])
             action_batch.append(self.actions[index])

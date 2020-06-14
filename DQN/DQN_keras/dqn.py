@@ -32,31 +32,19 @@ class DeepQ:
         self.count_steps = 0
         self.obs_space=obs_space
         self.action_space=action_space
-#        if K.backend() == 'tensorflow':
-#            with KTF.tf.device(TF_DEVICE):
-#                config = tf.ConfigProto()
-#                config.gpu_options.allow_growth = True
-#                KTF.set_session(tf.Session(config=config))
-#                self.initNetworks()
-#        else :
         self.initNetworks()
 
     def initNetworks(self):
-
         self.model = self.createModel()
         if self.useTargetNetwork:
             self.targetModel = self.createModel()
 
     def createModel(self):
         model = Sequential()
-        model.add(Dense(16,activation="relu",input_shape=(4,)))
-        model.add(layers.Dropout(0.5))
-        model.add(Dense(16,activation="relu"))
-        model.add(layers.Dropout(0.5))
-        model.add(Dense(self.action_space,activation="softmax"))
-        model.compile(optimizer=optimizers.RMSprop(lr=0.0001),
-                loss="binary_crossentropy",metrics=["MSE"])
-        model.summary()
+        model.add(Dense(24,activation="relu",input_shape=(4,)))
+        model.add(Dense(24,activation="relu"))
+        model.add(Dense(self.action_space,activation="linear"))
+        model.compile(optimizer=optimizers.RMSprop(self.learningRate),loss="mse")
         return model
 
     def backupNetwork(self, model, backup):
@@ -72,15 +60,12 @@ class DeepQ:
 
     def updateTargetNetwork(self):
         self.backupNetwork(self.model, self.targetModel)
-        print('update target network')
+#        print('update target network')
 
     # predict Q values for all the actions
     def getQValues(self, state):
-        if self.useTargetNetwork:
-            predicted = self.targetModel.predict(state)
-        else:
-            predicted = self.model.predict(state)
-        return predicted[0]
+        predicted = self.model.predict(state)
+        return predicted
 
     def getMaxIndex(self, qValues):
         return np.argmax(qValues)
@@ -105,14 +90,10 @@ class DeepQ:
     def learnOnMiniBatch(self, miniBatchSize,):
         #t0 = time.time()
         self.count_steps += 1
-
+        
         state_batch,action_batch,reward_batch,newState_batch,isFinal_batch\
         = self.memory.getMiniBatch(miniBatchSize)
-
-        qValues_batch = self.model.predict(np.array(state_batch),batch_size=miniBatchSize)
-
-        isFinal_batch = np.array(isFinal_batch) + 0
-
+        
         """
         target = reward(s,a) + gamma * max(Q(s')
         """
@@ -121,16 +102,17 @@ class DeepQ:
         else :
             qValuesNewState_batch = self.model.predict_on_batch(np.array(newState_batch))
 
-        Y_sample_batch = reward_batch + (1 - isFinal_batch) * self.discountFactor * np.max(qValuesNewState_batch, axis=1)
+        target = reward_batch + self.discountFactor * np.max(qValuesNewState_batch, axis=1)
+        
+        eval_value = self.model.predict_on_batch(np.array(state_batch))
+        
+        for i in range(len(eval_value)):
+            eval_value[i][action_batch[i]] =target[i]
 
         X_batch = np.array(state_batch)
-        Y_batch = np.array(qValues_batch)
+        Y_batch = np.array(target)
 
-        for i,action in enumerate(action_batch):
-            Y_batch[i][action] = Y_sample_batch[i]
-        #t1 = time.time()
-        #self.model.fit(X_batch, Y_batch, batch_size = miniBatchSize)
-        self.model.train_on_batch(X_batch, Y_batch)
+        self.model.train_on_batch(X_batch, eval_value)
         if self.useTargetNetwork and self.count_steps % 1000 == 0:
             self.updateTargetNetwork()
 

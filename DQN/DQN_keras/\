@@ -1,35 +1,17 @@
 import time
 import random
 import numpy as np
-from constants import *
-import pickle
+from keras.models import Sequential, load_model
+from keras.layers import Convolution2D, Flatten, ZeroPadding2D
+from keras.layers.core import Dense, Dropout, Activation
+from keras.layers.pooling import MaxPooling2D
+from keras.optimizers import SGD , Adam
+import tensorflow as tf
+import keras.backend.tensorflow_backend as KTF
 import memory
-import os
-import matplotlib.pyplot as plt
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.distributions import Normal,Categorical
-from torch.utils.data.sampler import BatchSampler,SubsetRandomSampler
-
-
-class Net(nn.Module):
-    def __init__(self,num_state,num_action):
-        super(Net,self).__init__()
-        self.fc1=nn.Linear(num_state,24)
-        self.fc2=nn.Linear(24,24)
-        self.out=nn.Linear(24,num_action)
-
-    def forward(self,x):
-        x=self.fc1(x)
-        x=F.tanh(x)
-        x=self.fc2(x)
-        x=F.tanh(x)
-        action_value=self.out(x)
-        return action_value
-
-
+import keras.backend as K
+from constants import *
+from keras import models,layers,optimizers
 class DeepQ:
     """
     DQN abstraction.
@@ -43,7 +25,6 @@ class DeepQ:
     """
     def __init__(self, obs_space, action_space,memorySize, discountFactor, \
             learningRate,useTargetNetwork):
-        super(DeepQ,self).__init__()
         self.memory = memory.Memory(memorySize)
         self.discountFactor = discountFactor
         self.learningRate = learningRate
@@ -51,11 +32,20 @@ class DeepQ:
         self.count_steps = 0
         self.obs_space=obs_space
         self.action_space=action_space
-        self.model=Net(self.obs_space,self.action_space)
-        self.targetModel=Net(self.obs_space,self.action_space)
-        self.optimizer=optim.Adam(self.model.parameters(),self.learningRate)
-        self.loss_func=nn.MSELoss()
+        self.initNetworks()
 
+    def initNetworks(self):
+        self.model = self.createModel()
+        if self.useTargetNetwork:
+            self.targetModel = self.createModel()
+
+    def createModel(self):
+        model = Sequential()
+        model.add(Dense(24,activation="relu",input_shape=(4,)))
+        model.add(Dense(24,activation="relu"))
+        model.add(Dense(self.action_space,activation="linear"))
+        model.compile(optimizer=optimizers.RMSprop(self.learningRate),loss="mse")
+        return model
 
     def backupNetwork(self, model, backup):
         weightMatrix = []
@@ -69,18 +59,16 @@ class DeepQ:
             i += 1
 
     def updateTargetNetwork(self):
-        self.targetModel.load_state_dict(self.model.state_dict())
+        self.backupNetwork(self.model, self.targetModel)
+#        print('update target network')
 
     # predict Q values for all the actions
     def getQValues(self, state):
-        if self.useTargetNetwork:
-            predicted = self.model.forward(state)
-        else:
-            predicted = self.targetModel.forward(state)
-        return predicted[0]
+        predicted = self.model.predict(state)
+        return predicted
 
     def getMaxIndex(self, qValues):
-        qValues = qValues.detach().numpy()
+        print(qValues)
         return np.argmax(qValues)
 
     # select the action with the highest Q value
@@ -106,31 +94,29 @@ class DeepQ:
 
         state_batch,action_batch,reward_batch,newState_batch,isFinal_batch\
         = self.memory.getMiniBatch(miniBatchSize)
-       
-        state_batch = torch.from_numpy(np.array(state_batch)).float()
-        reward_batch = np.array(reward_batch)
-        newState_batch = torch.from_numpy(np.array(newState_batch)).float()
 
-        All_action_qValues_batch = self.model(state_batch)
-        qValues_batch_wrt_a = All_action_qValues_batch[0][action_batch]
+        qValues_batch = self.model.predict(np.array(state_batch),batch_size=miniBatchSize)
+
+#        isFinal_batch = np.array(isFinal_batch) + 0
 
         """
         target = reward(s,a) + gamma * max(Q(s')
         """
         if self.useTargetNetwork:
-            qValuesNewState_batch = self.targetModel(newState_batch)
+            qValuesNewState_batch = self.targetModel.predict_on_batch(np.array(newState_batch))
         else :
-            qValuesNewState_batch = self.model(newState_batch)
+            qValuesNewState_batch = self.model.predict_on_batch(np.array(newState_batch))
 
-        Y_sample_batch = reward_batch + self.discountFactor * np.max(qValuesNewState_batch.detach().numpy(), axis=1)
-        
+#        Y_sample_batch = reward_batch + (1 - isFinal_batch) * self.discountFactor * np.max(qValuesNewState_batch, axis=1)
+        Y_sample_batch = reward_batch + self.discountFactor * np.max(qValuesNewState_batch, axis=1)
 
-        Y_sample_batch = torch.tensor(Y_sample_batch)
-        loss=self.loss_func(Y_sample_batch, qValues_batch_wrt_a)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        
+        X_batch = np.array(state_batch)
+        Y_batch = np.array(qValues_batch)
+
+        for i,action in enumerate(action_batch):
+            Y_batch[i][action] = Y_sample_batch[i]
+#        self.model.fit(X_batch, Y_batch, batch_size = miniBatchSize)
+        self.model.train_on_batch(X_batch, Y_batch)
         if self.useTargetNetwork and self.count_steps % 1000 == 0:
             self.updateTargetNetwork()
 
@@ -148,8 +134,12 @@ class DeepQ:
 
 
     def feedforward(self,observation,explorationRate):
-        observation=torch.unsqueeze(torch.FloatTensor(observation),0)
         qValues = self.getQValues(observation)
         action = self.selectAction(qValues, explorationRate)
         return action
+
+
+
+
+
 
